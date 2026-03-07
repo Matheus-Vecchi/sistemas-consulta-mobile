@@ -5,7 +5,7 @@ import { Consulta } from "./src/interfaces/consulta";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import ConsultaCard from "./src/components/ConsultaCard";
+import { ConsultaCard } from "./src/components";
 
 export default function App() {
   const cardiologia: Especialidade = {
