@@ -7,8 +7,7 @@ import { Medico } from "../interfaces/medico";
 import { Consulta } from "../interfaces/consulta";
 import { ConsultaCard } from "../components";
 import { styles } from "../styles/app.styles";
-import { AsyncStorage } from "@react-native-async-storage/async-storage";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const STORAGE_KEY = "@consultas:consulta_atual";
 
@@ -51,18 +50,49 @@ export default function Home() {
     carregarConsulta();
   }, []);
 
+  async function carregarConsulta() {
+  try {
+    const consultaSalva = await AsyncStorage.getItem(STORAGE_KEY);
+
+    if (consultaSalva) {
+      const consultaObjeto = JSON.parse(consultaSalva);
+      consultaObjeto.data = new Date(consultaObjeto.data);
+      setConsulta(consultaObjeto);
+    }
+  } catch (erro) {
+    console.error("Erro ao carregar consulta:", erro);
+    }
+  }
+
+  async function salvarConsulta(consultaAtualizada: Consulta) {
+  try {
+    await AsyncStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(consultaAtualizada)
+    );
+  } catch (erro) {
+    console.error("Erro ao salvar consulta:", erro);
+    }
+  }
+
   function confirmarConsulta() {
-    setConsulta({
+    const consultaAtualizada: Consulta = {
       ...consulta,
       status: "confirmada",
-    });
+    };
+
+    setConsulta(consultaAtualizada);
+    salvarConsulta(consultaAtualizada);
   }
 
   function cancelarConsulta() {
-    setConsulta({
+    const consultaAtualizada: Consulta = {
       ...consulta,
       status: "cancelada",
-    });
+    };
+
+    setConsulta(consultaAtualizada);
+    salvarConsulta(consultaAtualizada);
   }
 
   return (
