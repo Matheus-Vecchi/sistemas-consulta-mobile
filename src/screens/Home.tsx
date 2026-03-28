@@ -1,98 +1,45 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, Button } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { Especialidade } from "../types/especialidade";
-import { Paciente } from "../types/paciente";
-import { Medico } from "../interfaces/medico";
 import { Consulta } from "../interfaces/consulta";
 import { ConsultaCard } from "../components";
 import { styles } from "../styles/app.styles";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { obterConsultas, salvarConsultas } from "../services/storage";
 
-const STORAGE_KEY = "@consultas:consulta_atual";
-
-export default function Home() {
-  const cardiologia: Especialidade = {
-    id: 1,
-    nome: "Cardiologia",
-    descricao: "Cuidados com o coração",
-  };
-
-  const medico1: Medico = {
-    id: 1,
-    nome: "Dr. Roberto Silva",
-    crm: "CRM12345",
-    especialidade: cardiologia,
-    ativo: true,
-  };
-
-  const paciente1: Paciente = {
-    id: 1,
-    nome: "Carlos Andrade",
-    cpf: "123.456.789-00",
-    email: "carlos@email.com",
-    telefone: "(11) 98765-4321",
-  };
-
-  const consultaInicial: Consulta = {
-    id: 1,
-    medico: medico1,
-    paciente: paciente1,
-    data: new Date(2026, 2, 10),
-    valor: 350,
-    status: "agendada",
-    observacoes: "Consulta de rotina",
-  };
-
-  const [consulta, setConsulta] = useState<Consulta>(consultaInicial);
+export default function Home({ navigation }: any) {
+  const [consultas, setConsultas] = useState<Consulta[]>([]);
 
   useEffect(() => {
-    carregarConsulta();
-  }, []);
+    carregarConsultas();
 
-  async function carregarConsulta() {
-  try {
-    const consultaSalva = await AsyncStorage.getItem(STORAGE_KEY);
+    const unsubscribe = navigation.addListener("focus", () => {
+      carregarConsultas();
+    });
 
-    if (consultaSalva) {
-      const consultaObjeto = JSON.parse(consultaSalva);
-      consultaObjeto.data = new Date(consultaObjeto.data);
-      setConsulta(consultaObjeto);
-    }
-  } catch (erro) {
-    console.error("Erro ao carregar consulta:", erro);
-    }
+    return unsubscribe;
+  }, [navigation]);
+
+  async function carregarConsultas() {
+    const consultasSalvas = await obterConsultas();
+    setConsultas(consultasSalvas);
   }
 
-  async function salvarConsulta(consultaAtualizada: Consulta) {
-  try {
-    await AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(consultaAtualizada)
+  async function confirmarConsulta(consultaId: number) {
+    const consultasAtualizadas = consultas.map((c) =>
+      c.id === consultaId ? { ...c, status: "confirmada" as const } : c
     );
-  } catch (erro) {
-    console.error("Erro ao salvar consulta:", erro);
-    }
+
+    setConsultas(consultasAtualizadas);
+    await salvarConsultas(consultasAtualizadas);
   }
 
-  function confirmarConsulta() {
-    const consultaAtualizada: Consulta = {
-      ...consulta,
-      status: "confirmada",
-    };
+  async function cancelarConsulta(consultaId: number) {
+    const consultasAtualizadas = consultas.map((c) =>
+      c.id === consultaId ? { ...c, status: "cancelada" as const } : c
+    );
 
-    setConsulta(consultaAtualizada);
-    salvarConsulta(consultaAtualizada);
-  }
-
-  function cancelarConsulta() {
-    const consultaAtualizada: Consulta = {
-      ...consulta,
-      status: "cancelada",
-    };
-
-    setConsulta(consultaAtualizada);
-    salvarConsulta(consultaAtualizada);
+    setConsultas(consultasAtualizadas);
+    await salvarConsultas(consultasAtualizadas);
   }
 
   return (
@@ -101,22 +48,42 @@ export default function Home() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.titulo}>Sistema de Consultas</Text>
-          <Text style={styles.subtitulo}>Consulta #{consulta.id}</Text>
-        </View>
-
-        <ConsultaCard
-          consulta={consulta}
-          onConfirmar={confirmarConsulta}
-          onCancelar={cancelarConsulta}
-        />
-
-        <View style={styles.rodape}>
-          <Text style={styles.rodapeTexto}>
-            Projeto React Native com componentização, props e renderização
-            condicional.
+          <Text style={styles.titulo}>Minhas Consultas</Text>
+          <Text style={styles.subtitulo}>
+            {consultas.length} consulta(s) cadastrada(s)
           </Text>
         </View>
+
+        {consultas.length === 0 ? (
+          <View style={{ padding: 20, alignItems: "center" }}>
+            <Text style={{ color: "#fff", marginBottom: 20 }}>
+              Nenhuma consulta agendada ainda
+            </Text>
+
+            <Button
+              title="Ir para Admin"
+              onPress={() => navigation.navigate("Admin")}
+            />
+          </View>
+        ) : (
+          <>
+            {consultas.map((consulta) => (
+              <ConsultaCard
+                key={consulta.id}
+                consulta={consulta}
+                onConfirmar={() => confirmarConsulta(consulta.id)}
+                onCancelar={() => cancelarConsulta(consulta.id)}
+              />
+            ))}
+
+            <View style={{ marginTop: 20 }}>
+              <Button
+                title="Ir para Admin"
+                onPress={() => navigation.navigate("Admin")}
+              />
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
