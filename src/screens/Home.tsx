@@ -1,5 +1,12 @@
-import React, { useState } from "react";
-import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useState } from "react";
+import {
+  Alert,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useFocusEffect } from "@react-navigation/native";
 import { Consulta } from "../interfaces/consulta";
@@ -17,7 +24,7 @@ export default function Home({ navigation }: any) {
   const [nomePaciente, setNomePaciente] = useState("");
 
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       carregarDados();
     }, [])
   );
@@ -70,14 +77,40 @@ export default function Home({ navigation }: any) {
     await salvarConsultas(consultasAtualizadasCompletas);
   }
 
-  async function handleLogout() {
+  async function executarLogout() {
+    try {
+      await removerPacienteLogado();
+
+      setConsultas([]);
+      setNomePaciente("");
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    } catch (erro) {
+      console.error("Erro ao sair:", erro);
+      Alert.alert("Erro", "Não foi possível sair da conta");
+    }
+  }
+
+  function handleLogout() {
+    if (Platform.OS === "web") {
+      const confirmou = confirm("Deseja realmente sair da sua conta?");
+
+      if (confirmou) {
+        executarLogout();
+      }
+
+      return;
+    }
+
     Alert.alert("Sair", "Deseja realmente sair da sua conta?", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Sair",
-        onPress: async () => {
-          await removerPacienteLogado();
-          navigation.replace("Login");
+        onPress: () => {
+          executarLogout();
         },
       },
     ]);
