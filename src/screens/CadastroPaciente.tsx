@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -27,23 +26,29 @@ export default function CadastroPaciente({ navigation }: any) {
   const [etapa, setEtapa] = useState<"cpf" | "cadastro">("cpf");
   const [verificando, setVerificando] = useState(false);
   const [erro, setErro] = useState("");
+  const [mostrarBotaoCadastro, setMostrarBotaoCadastro] = useState(false);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener("focus", async () => {
-      const pacienteLogado = await obterPacienteLogado();
+      try {
+        const pacienteLogado = await obterPacienteLogado();
 
-      if (pacienteLogado) {
-        navigation.replace("Home");
-        return;
+        if (pacienteLogado) {
+          navigation.replace("Home");
+          return;
+        }
+
+        setEtapa("cpf");
+        setCpf("");
+        setNome("");
+        setEmail("");
+        setTelefone("");
+        setErro("");
+        setMostrarBotaoCadastro(false);
+        setVerificando(false);
+      } catch (error) {
+        console.error("Erro ao verificar sessão:", error);
       }
-
-      setEtapa("cpf");
-      setCpf("");
-      setNome("");
-      setEmail("");
-      setTelefone("");
-      setErro("");
-      setVerificando(false);
     });
 
     return unsubscribe;
@@ -56,14 +61,15 @@ export default function CadastroPaciente({ navigation }: any) {
 
   async function verificarCPF() {
     setErro("");
+    setMostrarBotaoCadastro(false);
 
     if (!cpf.trim()) {
-      Alert.alert("Erro", "Por favor, preencha seu CPF");
+      setErro("Por favor, preencha seu CPF");
       return;
     }
 
     if (!validarCPF(cpf)) {
-      Alert.alert("Erro", "CPF deve ter 11 dígitos");
+      setErro("CPF deve ter 11 dígitos");
       return;
     }
 
@@ -80,24 +86,29 @@ export default function CadastroPaciente({ navigation }: any) {
         await salvarPacienteLogado(pacienteExistente);
         navigation.replace("Home");
       } else {
-        setErro("CPF não encontrado no cadastro. Verifique se digitou corretamente.");
+        setErro(
+          "CPF não encontrado no cadastro. Verifique se digitou corretamente."
+        );
+        setMostrarBotaoCadastro(true);
       }
     } catch (error) {
       console.error("Erro ao verificar CPF:", error);
-      Alert.alert("Erro", "Não foi possível verificar o CPF");
+      setErro("Não foi possível verificar o CPF");
     } finally {
       setVerificando(false);
     }
   }
 
   async function completarCadastro() {
+    setErro("");
+
     if (!nome.trim()) {
-      Alert.alert("Erro", "Por favor, preencha seu nome");
+      setErro("Por favor, preencha seu nome");
       return;
     }
 
     if (!email.trim()) {
-      Alert.alert("Erro", "Por favor, preencha seu email");
+      setErro("Por favor, preencha seu email");
       return;
     }
 
@@ -121,7 +132,7 @@ export default function CadastroPaciente({ navigation }: any) {
       navigation.replace("Home");
     } catch (error) {
       console.error("Erro ao cadastrar paciente:", error);
-      Alert.alert("Erro", "Não foi possível realizar o cadastro");
+      setErro("Não foi possível realizar o cadastro");
     } finally {
       setVerificando(false);
     }
@@ -158,6 +169,7 @@ export default function CadastroPaciente({ navigation }: any) {
                   onChangeText={(texto) => {
                     setCpf(texto);
                     setErro("");
+                    setMostrarBotaoCadastro(false);
                   }}
                   keyboardType="numeric"
                   maxLength={14}
@@ -179,14 +191,19 @@ export default function CadastroPaciente({ navigation }: any) {
                 <View style={styles.erroContainer}>
                   <Text style={styles.erroTexto}>{erro}</Text>
 
-                  <TouchableOpacity
-                    style={styles.botaoCadastro}
-                    onPress={() => setEtapa("cadastro")}
-                  >
-                    <Text style={styles.botaoCadastroTexto}>
-                      Fazer cadastro agora
-                    </Text>
-                  </TouchableOpacity>
+                  {mostrarBotaoCadastro && (
+                    <TouchableOpacity
+                      style={styles.botaoCadastro}
+                      onPress={() => {
+                        setEtapa("cadastro");
+                        setErro("");
+                      }}
+                    >
+                      <Text style={styles.botaoCadastroTexto}>
+                        Fazer cadastro agora
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ) : null}
 
@@ -216,7 +233,10 @@ export default function CadastroPaciente({ navigation }: any) {
                   placeholder="Digite seu nome completo"
                   placeholderTextColor="#999"
                   value={nome}
-                  onChangeText={setNome}
+                  onChangeText={(texto) => {
+                    setNome(texto);
+                    setErro("");
+                  }}
                   autoCapitalize="words"
                   editable={!verificando}
                 />
@@ -229,7 +249,10 @@ export default function CadastroPaciente({ navigation }: any) {
                   placeholder="seu@email.com"
                   placeholderTextColor="#999"
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(texto) => {
+                    setEmail(texto);
+                    setErro("");
+                  }}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   editable={!verificando}
@@ -243,11 +266,20 @@ export default function CadastroPaciente({ navigation }: any) {
                   placeholder="(11) 99999-9999"
                   placeholderTextColor="#999"
                   value={telefone}
-                  onChangeText={setTelefone}
+                  onChangeText={(texto) => {
+                    setTelefone(texto);
+                    setErro("");
+                  }}
                   keyboardType="phone-pad"
                   editable={!verificando}
                 />
               </View>
+
+              {erro ? (
+                <View style={styles.erroContainer}>
+                  <Text style={styles.erroTexto}>{erro}</Text>
+                </View>
+              ) : null}
 
               <TouchableOpacity
                 style={[styles.botao, verificando && styles.botaoDesabilitado]}
@@ -264,6 +296,7 @@ export default function CadastroPaciente({ navigation }: any) {
                 onPress={() => {
                   setEtapa("cpf");
                   setErro("");
+                  setMostrarBotaoCadastro(false);
                 }}
                 disabled={verificando}
               >
