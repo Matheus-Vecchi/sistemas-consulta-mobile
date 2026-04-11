@@ -30,16 +30,23 @@ export default function Agendamento({ navigation }: any) {
   const [dataConsulta, setDataConsulta] = useState("");
 
   useEffect(() => {
-    carregarDados();
-  }, []);
+  verificarSessaoECarregarDados();
+}, []);
 
-  async function carregarDados() {
-    const esps = await obterEspecialidades();
-    const meds = await obterMedicos();
+  async function verificarSessaoECarregarDados() {
+    const paciente = await obterPacienteLogado();
 
-    setEspecialidades(esps);
-    setMedicos(meds);
+  if (!paciente) {
+    navigation.replace("Login");
+    return;
   }
+
+  const esps = await obterEspecialidades();
+  const meds = await obterMedicos();
+
+  setEspecialidades(esps);
+  setMedicos(meds);
+}
 
   function selecionarEspecialidade(esp: Especialidade) {
     setEspecialidadeSelecionada(esp);
